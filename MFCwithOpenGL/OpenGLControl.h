@@ -10,8 +10,8 @@
 #include <glm/glm/vec4.hpp> // glm::vec4
 #include <glm/glm/mat4x4.hpp> // glm::mat4
 #include <glm/glm/gtc/matrix_transform.hpp> // glm::translate, glm::rotate, glm::scale, glm::perspective
-
-
+#include <glm/glm/gtc/type_ptr.hpp>
+#define FBM_SIZE 512
 
 class COpenGLControl : public CWnd
 {
@@ -49,9 +49,21 @@ private:
 	GLuint _vbo_vpoint; ///< memory buffer
 	GLuint vpoint_id;
 
-//	std::vector<glm::Vec3> vertices;
-//	std::vector<glm::Vec3> triangle_vec;
+	std::vector<glm::vec3> vertices;
+	std::vector<glm::vec3> triangle_vec;
+	std::vector<glm::vec2> vtexcoord;  //texture coords for height map. Covers whole mesh
 	void MakeVertices(int width, int height);
+
+	//camera stuff
+	glm::mat4 Projection;
+	glm::mat4 View;
+	glm::mat4 Model;
+
+	glm::vec3 dirVec;
+	glm::vec3 eye;
+
+	//FBM stuff
+
 
 
 

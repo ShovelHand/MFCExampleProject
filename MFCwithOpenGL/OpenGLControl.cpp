@@ -2,6 +2,8 @@
 #include "OpenGLControl.h"
 #include ".\openglcontrol.h"
 
+using namespace glm;
+
 COpenGLControl::COpenGLControl(void)
 {
 	m_fPosX = 0.0f;		// X position of model in camera view
@@ -14,6 +16,12 @@ COpenGLControl::COpenGLControl(void)
 
 COpenGLControl::~COpenGLControl(void)
 {
+	glBindVertexArray(0);
+	glUseProgram(0);
+	glDeleteBuffers(1, &_vbo_vpoint);
+//	glDeleteBuffers(1, &_vbo_vtexcoord);
+	glDeleteProgram(pid);
+	glDeleteVertexArrays(1, &_vao);
 }
 
 BEGIN_MESSAGE_MAP(COpenGLControl, CWnd)
@@ -40,15 +48,15 @@ void COpenGLControl::OnSize(UINT nType, int cx, int cy)
 	glViewport(0, 0, cx, cy);
 
 	// Projection view
-	glMatrixMode(GL_PROJECTION);
+//	glMatrixMode(GL_PROJECTION);
 
-	glLoadIdentity();
+//	glLoadIdentity();
 
 	// Set our current view perspective
-	gluPerspective(35.0f, (float)cx / (float)cy, 0.01f, 2000.0f);
+//	gluPerspective(35.0f, (float)cx / (float)cy, 0.01f, 2000.0f);
 
 	// Model view
-	glMatrixMode(GL_MODELVIEW);
+//	glMatrixMode(GL_MODELVIEW);
 
 	switch (nType)
 	{
@@ -99,6 +107,7 @@ int COpenGLControl::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	if (CWnd::OnCreate(lpCreateStruct) == -1) return -1;
 
 	oglInitialize();
+	
 //	m_unpTimer = SetTimer(1, 1, 0);
 	return 0;
 }
@@ -120,7 +129,7 @@ void COpenGLControl::OnTimer(UINT nIDEvent)
 	{
 	case 1:
 	{
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		glClearColor(0.50f, 0.50f, 0.50f, 0.0f);
 		// Clear color and depth buffer bits
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -231,19 +240,52 @@ void COpenGLControl::oglInitialize(void)
 	glClearDepth(1.0f);
 
 	// Turn on backface culling
+	/*
 	glFrontFace(GL_CCW);
 	glCullFace(GL_BACK);
 
 	// Turn on depth testing
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
-
+	*/
 	// *** initialize program shaders
 	pid = LoadShader("c:\\Users\\Alex\\documents\\Shaders\\vertShader.glsl", 
 		"c:\\Users\\Alex\\documents\\Shaders\\fragShader.glsl");
 	if (!pid) exit(EXIT_FAILURE);
-	
 
+	//make the grid
+
+	//--- Vertex one vertex Array
+	glGenVertexArrays(1, &_vao);
+	glBindVertexArray(_vao);
+	
+	MakeVertices(40,40);
+//	triangle_vec = { vec3(0.0f,1.0f,-2.0f), vec3(-1.0f, 0.0f, -1.0f), vec3(1.0f, 0.0f, -3.0f) };
+
+	///--- Buffer
+	glGenBuffers(1, &_vbo_vpoint);
+	glBindBuffer(GL_ARRAY_BUFFER, _vbo_vpoint);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vec3)*triangle_vec.size(), &triangle_vec[0], GL_STATIC_DRAW);
+
+	///--- Attribute
+	GLuint vpoint_id = glGetAttribLocation(pid, "vpoint");
+	glVertexAttribPointer(vpoint_id, 3, GL_FLOAT, GL_TRUE, 0, NULL);
+	glEnableVertexAttribArray(vpoint_id);
+
+	//TODO: function for generating noise image goes here.
+
+
+	///--- to avoid the current object being polluted
+	glBindVertexArray(0);
+	glUseProgram(0);
+
+	//setup camera
+	dirVec = vec3(0.0f, 0.0f, -2.0f);
+	eye = vec3(0.0f, 10.0f, 10.0f);
+	Projection = perspective(radians(45.0f), 1.0f, 1.0f, 100.0f);
+//	View = translate(mat4(1.0f), eye);
+	View = lookAt(eye, dirVec, vec3(0.0f, 1.0f, 0.0f));
+	Model = scale(mat4(1.0f), vec3(1.0f));
 
 	// Send draw request
 	OnDraw(NULL);
@@ -252,55 +294,56 @@ void COpenGLControl::oglInitialize(void)
 void COpenGLControl::oglDrawScene(void)
 {
 	
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glUseProgram(pid);
 	
-	// Wireframe Mode
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glUniformMatrix4fv(glGetUniformLocation(pid, "model"), 1, GL_FALSE, &Model[0][0]);
+	glUniformMatrix4fv(glGetUniformLocation(pid, "view"), 1, GL_FALSE, &View[0][0]);
+	glUniformMatrix4fv(glGetUniformLocation(pid, "projection"), 1, GL_FALSE, &Projection[0][0]);
+	
+	glBindVertexArray(_vao);
 
-	glBegin(GL_QUADS);
-	// Front Side
-	glVertex3f(1.0f, 1.0f, 1.0f);
-	glVertex3f(-1.0f, 1.0f, 1.0f);
-	glVertex3f(-1.0f, -1.0f, 1.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
+	glPointSize(5.0f);
+	glDrawArrays(GL_TRIANGLES, 0, triangle_vec.size()); 
 
-	// Back Side
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-	glVertex3f(-1.0f, 1.0f, -1.0f);
-	glVertex3f(1.0f, 1.0f, -1.0f);
-	glVertex3f(1.0f, -1.0f, -1.0f);
+	glUseProgram(0);
+	glBindVertexArray(0);
+}
 
-	// Top Side
-	glVertex3f(1.0f, 1.0f, 1.0f);
-	glVertex3f(1.0f, 1.0f, -1.0f);
-	glVertex3f(-1.0f, 1.0f, -1.0f);
-	glVertex3f(-1.0f, 1.0f, 1.0f);
+void COpenGLControl::MakeVertices(int width, int height)
+{
 
-	// Bottom Side
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-	glVertex3f(1.0f, -1.0f, -1.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-	glVertex3f(-1.0f, -1.0f, 1.0f);
+	for (int i = 0; i < height; i++)
+	{
+		for (int j = 0; j < width; j++)
+			vertices.push_back(vec3(float(i), 0.0, float(j)));
+	}
 
-	// Right Side
-	glVertex3f(1.0f, 1.0f, 1.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-	glVertex3f(1.0f, -1.0f, -1.0f);
-	glVertex3f(1.0f, 1.0f, -1.0f);
-
-	// Left Side
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-	glVertex3f(-1.0f, -1.0f, 1.0f);
-	glVertex3f(-1.0f, 1.0f, 1.0f);
-	glVertex3f(-1.0f, 1.0f, -1.0f);
-	glEnd();
-
-
-//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//	glUseProgram(pid);
-//	glBindVertexArray(_vao);
-//	glDrawArrays(GL_TRIANGLES, 0,  3 /*#verts*/);
-
-//	glUseProgram(0);
-//	glBindVertexArray(0);
+	//triangle strip
+	for (int j = 0; j < (height - 1); ++j)
+	{
+		//sqaures inside a triangle strip
+		for (int i = 0; i < (width - 1); ++i)
+		{
+			int topleft = j * width + i;
+			int topright = topleft + 1;
+			int bottomleft = (j + 1) * width + i;
+			int bottomright = bottomleft + 1;
+			//the upper left triangle
+			triangle_vec.push_back(vertices[topleft]);
+			triangle_vec.push_back(vertices[topright]);
+			triangle_vec.push_back(vertices[bottomleft]);
+			//the lower right triangle
+			triangle_vec.push_back(vertices[topright]);
+			triangle_vec.push_back(vertices[bottomright]);
+			triangle_vec.push_back(vertices[bottomleft]);
+		}
+	}
+	/*
+	//make the pixel coordinates for the height map texture
+	for (std::vector<vec3>::iterator itr = triangle_vec.begin(); itr != triangle_vec.end(); ++itr)
+		vtexcoord.push_back(vec2((*itr).x() / float(width), (*itr).z() / float(height)));
+		*/
 }
 
