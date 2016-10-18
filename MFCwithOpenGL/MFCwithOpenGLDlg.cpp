@@ -98,9 +98,24 @@ BOOL CMFCwithOpenGLDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
-	ShowWindow(SW_MINIMIZE);
+	ShowWindow(SW_NORMAL);
 
 	// TODO: Add extra initialization here
+	//show the window which displays all the openGL stuff. 
+	CRect rect;
+
+	// Get size and position of the picture control
+	GetDlgItem(IDC_OPENGL)->GetWindowRect(rect);
+
+	// Convert screen coordinates to client coordinates
+	ScreenToClient(rect);
+
+	// Create OpenGL Control window
+	m_oglWindow.oglCreate(rect, this);
+
+	// Setup the OpenGL Window's timer to render
+	m_oglWindow.m_unpTimer = m_oglWindow.SetTimer(1, 1, 0);
+	
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -124,6 +139,7 @@ void CMFCwithOpenGLDlg::OnSysCommand(UINT nID, LPARAM lParam)
 
 void CMFCwithOpenGLDlg::OnPaint()
 {
+
 	if (IsIconic())
 	{
 		CPaintDC dc(this); // device context for painting
