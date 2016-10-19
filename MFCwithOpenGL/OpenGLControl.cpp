@@ -2,13 +2,14 @@
 #include "OpenGLControl.h"
 #include ".\openglcontrol.h"
 
+
 using namespace glm;
 
 COpenGLControl::COpenGLControl(void)
 {
 	m_fPosX = 0.0f;		// X position of model in camera view
 	m_fPosY = 0.0f;		// Y position of model in camera view
-	m_fZoom = 10.0f;	// Zoom on model in camera view
+	m_fZoom = 3.0f;	// Zoom on model in camera view
 	m_fRotX = 0.0f;		// Rotation on model in camera view
 	m_fRotY = 0.0f;		// Rotation on model in camera view
 	m_bIsMaximized = false;
@@ -30,6 +31,8 @@ BEGIN_MESSAGE_MAP(COpenGLControl, CWnd)
 	ON_WM_CREATE()
 	ON_WM_TIMER()
 	ON_WM_MOUSEMOVE()
+	ON_WM_MOUSEHWHEEL()
+	ON_WM_MOUSEWHEEL()
 END_MESSAGE_MAP()
 
 void COpenGLControl::OnPaint()
@@ -46,17 +49,6 @@ void COpenGLControl::OnSize(UINT nType, int cx, int cy)
 
 	// Map the OpenGL coordinates.
 	glViewport(0, 0, cx, cy);
-
-	// Projection view
-//	glMatrixMode(GL_PROJECTION);
-
-//	glLoadIdentity();
-
-	// Set our current view perspective
-//	gluPerspective(35.0f, (float)cx / (float)cy, 0.01f, 2000.0f);
-
-	// Model view
-//	glMatrixMode(GL_MODELVIEW);
 
 	switch (nType)
 	{
@@ -149,6 +141,40 @@ void COpenGLControl::OnTimer(UINT nIDEvent)
 	CWnd::OnTimer(nIDEvent);
 }
 
+//camera rotation helpers
+void COpenGLControl::RotateX(vec3 *dir, float rot) {
+	double cosPhi = (double)cos(rot);
+	double sinPhi = (double)sin(rot);
+	//need to learn proper way to mult vec3 by matrix
+	float xnew = 0;
+	xnew += (*dir).x;
+	float ynew = 0;
+	ynew += (*dir).y * cosPhi;
+	ynew += (*dir).z * sinPhi;
+	float znew = 0;
+	znew += (*dir).y * -sinPhi;
+	znew += (*dir).z * cosPhi;
+
+	(*dir).x = xnew; (*dir).y = ynew; (*dir).z = znew;
+}
+
+
+void COpenGLControl::RotateY(vec3 *dir, float rot) {
+	float cosPhi = (float)cos(rot);
+	float sinPhi = (float)sin(rot);
+	float xnew = 0;
+	xnew += (*dir).x*cosPhi;
+	xnew += (*dir).z * sinPhi;
+	float ynew = 0;
+	ynew += (*dir).y * 1;
+	ynew += (*dir).z * sinPhi;
+	float znew = 0;
+	znew += (*dir).x * -sinPhi;
+	znew += (*dir).z * cosPhi;
+
+	(*dir).x = xnew; (*dir).y = ynew; (*dir).z = znew;
+}
+
 void COpenGLControl::OnMouseMove(UINT nFlags, CPoint point)
 {
 	int diffX = (int)(point.x - m_fLastX);
@@ -159,37 +185,66 @@ void COpenGLControl::OnMouseMove(UINT nFlags, CPoint point)
 	// Left mouse button
 	if (nFlags & MK_LBUTTON)
 	{
-		m_fRotX += (float)0.5f * diffY;
+		m_fRotX += (float)0.1f * diffY;
 
 		if ((m_fRotX > 360.0f) || (m_fRotX < -360.0f))
 		{
 			m_fRotX = 0.0f;
 		}
 
-		m_fRotY += (float)0.5f * diffX;
+		m_fRotY += (float)0.1f * diffX;
 
 		if ((m_fRotY > 360.0f) || (m_fRotY < -360.0f))
 		{
 			m_fRotY = 0.0f;
 		}
+
+		//rotate the camera and the point it's looking at.
+		RotateX(&dirVec, m_fRotX/100.0f);
+		RotateY(&dirVec, m_fRotY/100.0f);
+		RotateX(&eye, m_fRotX / 100.0f);
+		RotateY(&eye, m_fRotY / 100.0f);
 	}
 
 	// Right mouse button
 	else if (nFlags & MK_RBUTTON)
 	{
 		m_fZoom -= (float)0.1f * diffY;
+		eye.z += diffY;
+		dirVec.z += diffY;
+
+		eye.x += diffX;
+		dirVec.x += diffX;
 	}
 
 	// Middle mouse button
 	else if (nFlags & MK_MBUTTON)
 	{
 		m_fPosX += (float)0.05f * diffX;
-		m_fPosY -= (float)0.05f * diffY;
+		m_fPosY -= (float)0.05f * diffY;	
 	}
-
+	View = lookAt(eye, dirVec, vec3(0.0f, 1.0f, 0.0f));
 	OnDraw(NULL);
 
 	CWnd::OnMouseMove(nFlags, point);
+}
+
+
+BOOL COpenGLControl::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
+{
+	// TODO: Add your message handler code here and/or call default
+	if (zDelta > 0)
+	{
+		eye -= normalize(dirVec);	
+		dirVec -= normalize(dirVec);
+	}
+	else
+	{
+		eye += normalize(dirVec);
+		dirVec += normalize(dirVec);
+	}
+	View = lookAt(eye, dirVec, vec3(0.0f, 1.0f, 0.0f));
+	return CWnd::OnMouseWheel(nFlags, zDelta, pt);
 }
 
 void COpenGLControl::oglCreate(CRect rect, CWnd *parent)
@@ -272,7 +327,36 @@ void COpenGLControl::oglInitialize(void)
 	glVertexAttribPointer(vpoint_id, 3, GL_FLOAT, GL_TRUE, 0, NULL);
 	glEnableVertexAttribArray(vpoint_id);
 
-	//TODO: function for generating noise image goes here.
+	//Height map inits
+	FBMGenerator* generator = new FBMGenerator();
+	RGBImage Noise = generator->BuildNoiseImage(FBM_SIZE, FBM_SIZE); 
+	
+	
+	//vertex buffer for heightmap texture
+	{
+		///--- Buffer
+		glGenBuffers(1, &vbo_vtexcoord);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo_vtexcoord);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vec2)*vtexcoord.size(), &vtexcoord[0], GL_STATIC_DRAW);
+
+		///--- Attribute
+		GLuint vtexcoord_id = glGetAttribLocation(pid, "TexCoord");
+		glEnableVertexAttribArray(vtexcoord_id);
+		glVertexAttribPointer(vtexcoord_id, 2, GL_FLOAT, GL_TRUE, 0, NULL);
+	}
+	///--- Load texture heightmap
+	glGenTextures(1, &tex_heightmap);
+
+	glUniform1i(glGetUniformLocation(pid, "tex_height"), 6 /*GL_TEXTURE6*/);
+	glBindTexture(GL_TEXTURE_2D, tex_heightmap);
+	//	glfwLoadTexture2D("_mesh/blacknwhitefbm.tga", 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, Noise.rows(),
+		Noise.cols(), 0, GL_RGB, GL_FLOAT,
+		Noise.data());
 
 
 	///--- to avoid the current object being polluted
@@ -280,7 +364,7 @@ void COpenGLControl::oglInitialize(void)
 	glUseProgram(0);
 
 	//setup camera
-	dirVec = vec3(0.0f, 0.0f, -2.0f);
+	dirVec = vec3(0.0f, -10.0f, -2.0f);
 	eye = vec3(0.0f, 10.0f, 10.0f);
 	Projection = perspective(radians(45.0f), 1.0f, 1.0f, 100.0f);
 //	View = translate(mat4(1.0f), eye);
@@ -314,9 +398,9 @@ void COpenGLControl::oglDrawScene(void)
 void COpenGLControl::MakeVertices(int width, int height)
 {
 
-	for (int i = 0; i < height; i++)
+	for (int i = -(height/2); i < height/2; i++)
 	{
-		for (int j = 0; j < width; j++)
+		for (int j = -(width/2); j < width/2; j++)
 			vertices.push_back(vec3(float(i), 0.0, float(j)));
 	}
 
@@ -340,10 +424,13 @@ void COpenGLControl::MakeVertices(int width, int height)
 			triangle_vec.push_back(vertices[bottomleft]);
 		}
 	}
-	/*
+	
 	//make the pixel coordinates for the height map texture
 	for (std::vector<vec3>::iterator itr = triangle_vec.begin(); itr != triangle_vec.end(); ++itr)
-		vtexcoord.push_back(vec2((*itr).x() / float(width), (*itr).z() / float(height)));
-		*/
+		vtexcoord.push_back(vec2((*itr).x / float(width), (*itr).z / float(height)));
+		
 }
+
+
+
 

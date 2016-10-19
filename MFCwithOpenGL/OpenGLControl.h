@@ -11,7 +11,9 @@
 #include <glm/glm/mat4x4.hpp> // glm::mat4
 #include <glm/glm/gtc/matrix_transform.hpp> // glm::translate, glm::rotate, glm::scale, glm::perspective
 #include <glm/glm/gtc/type_ptr.hpp>
-#define FBM_SIZE 512
+#include "FBMGenerator.h"
+
+#define FBM_SIZE 128
 
 class COpenGLControl : public CWnd
 {
@@ -48,11 +50,16 @@ private:
 	GLuint _vao; ///< vertex array object
 	GLuint _vbo_vpoint; ///< memory buffer
 	GLuint vpoint_id;
+	GLuint normalbuffer;
+
+	GLuint vbo_vtexcoord; ///< memory buffer
+	GLuint tex_heightmap;
 
 	std::vector<glm::vec3> vertices;
 	std::vector<glm::vec3> triangle_vec;
 	std::vector<glm::vec2> vtexcoord;  //texture coords for height map. Covers whole mesh
 	void MakeVertices(int width, int height);
+//	FBMGenerator noiseGenerator;
 
 	//camera stuff
 	glm::mat4 Projection;
@@ -61,11 +68,8 @@ private:
 
 	glm::vec3 dirVec;
 	glm::vec3 eye;
-
-	//FBM stuff
-
-
-
+	void RotateX(glm::vec3 *dir, float rot);
+	void RotateY(glm::vec3 *dir, float rot);
 
 public:
 	COpenGLControl(void);
@@ -84,5 +88,9 @@ public:
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 
 
+
 	DECLARE_MESSAGE_MAP()
+
+	afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
 };
+

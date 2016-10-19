@@ -92,7 +92,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\Users\Alex\Documents\C++Libs\glm-0.9.8.1\;C:\Users\Alex\Documents\C++Libs\glew-1.9.0-win32\glew-1.9.0\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Alex\Documents\C++Libs\eigen-eigen-b9cd8366d4e8\eigen-eigen-b9cd8366d4e8\;C:\Users\Alex\Documents\C++Libs\glm-0.9.8.1\;C:\Users\Alex\Documents\C++Libs\glew-1.9.0-win32\glew-1.9.0\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -141,7 +141,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\Users\Alex\Documents\C++Libs\glm-0.9.8.1\;C:\Users\Alex\Documents\C++Libs\glew-1.9.0-win32\glew-1.9.0\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Alex\Documents\C++Libs\eigen-eigen-b9cd8366d4e8\eigen-eigen-b9cd8366d4e8\;C:\Users\Alex\Documents\C++Libs\glm-0.9.8.1\;C:\Users\Alex\Documents\C++Libs\glew-1.9.0-win32\glew-1.9.0\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -191,6 +191,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="FBMGenerator.h" />
     <ClInclude Include="GLShader.h" />
     <ClInclude Include="MFCwithOpenGL.h" />
     <ClInclude Include="MFCwithOpenGLDlg.h" />
@@ -200,6 +201,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="FBMGenerator.cpp" />
     <ClCompile Include="GLShader.cpp" />
     <ClCompile Include="MFCwithOpenGL.cpp" />
     <ClCompile Include="MFCwithOpenGLDlg.cpp" />
