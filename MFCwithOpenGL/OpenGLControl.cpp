@@ -289,20 +289,9 @@ void COpenGLControl::oglInitialize(void)
 	wglMakeCurrent(hdc, hrc);
 
 	// Basic Setup:
-	//
-	// Set color to use when clearing the background.
-//	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClearDepth(1.0f);
 
-	// Turn on backface culling
-	/*
-	glFrontFace(GL_CCW);
-	glCullFace(GL_BACK);
 
-	// Turn on depth testing
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);
-	*/
 	// *** initialize program shaders
 	pid = LoadShader("c:\\Users\\Alex\\documents\\Shaders\\vertShader.glsl", 
 		"c:\\Users\\Alex\\documents\\Shaders\\fragShader.glsl");
@@ -315,7 +304,6 @@ void COpenGLControl::oglInitialize(void)
 	glBindVertexArray(_vao);
 	
 	MakeVertices(40,40);
-//	triangle_vec = { vec3(0.0f,1.0f,-2.0f), vec3(-1.0f, 0.0f, -1.0f), vec3(1.0f, 0.0f, -3.0f) };
 
 	///--- Buffer
 	glGenBuffers(1, &_vbo_vpoint);
@@ -366,7 +354,7 @@ void COpenGLControl::oglInitialize(void)
 	//setup camera
 	dirVec = vec3(0.0f, -10.0f, -2.0f);
 	eye = vec3(0.0f, 10.0f, 10.0f);
-	Projection = perspective(radians(45.0f), 1.0f, 1.0f, 100.0f);
+	Projection = perspective(radians(45.0f), 1.0f, 1.0f, 200.0f);
 //	View = translate(mat4(1.0f), eye);
 	View = lookAt(eye, dirVec, vec3(0.0f, 1.0f, 0.0f));
 	Model = scale(mat4(1.0f), vec3(1.0f));
@@ -398,9 +386,9 @@ void COpenGLControl::oglDrawScene(void)
 void COpenGLControl::MakeVertices(int width, int height)
 {
 
-	for (int i = -(height/2); i < height/2; i++)
+	for (int i = -0; i < height; i++)
 	{
-		for (int j = -(width/2); j < width/2; j++)
+		for (int j = 0; j < width; j++)
 			vertices.push_back(vec3(float(i), 0.0, float(j)));
 	}
 
