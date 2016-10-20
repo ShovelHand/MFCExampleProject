@@ -38,9 +38,9 @@ RGBImage FBMGenerator::BuildNoiseImage(int width, int height)
 			base(i, j) = randGradientVec; //make base noise image
 		}
 
-	for (int j = 0; j < width; ++j)
+	for (int i = 0; i < width; ++i)
 	{
-		for (int i = 0; i < height; ++i)
+		for (int j = 0; j < height; ++j)
 		{
 			int left = (i / period) * period;
 			int right = (left + period) % width;
@@ -71,17 +71,18 @@ RGBImage FBMGenerator::BuildNoiseImage(int width, int height)
 			float uv = Mix(u, v, fx);
 			float noise = Mix(st, uv, fy);
 
-			//	result(i,j) = vec3(noise, noise, noise);
+				result(i,j) = Eigen::Vector3f(noise, noise, noise);
 			noiseArray[i][j] = noise;
 		}
 	}
 
-	for (int i = 0; i < base.rows(); i++)
+	//Build FBM image based on perlin noise.
+	/*for (int i = 0; i < base.rows(); i++)
 		for (int j = 0; j < base.cols(); j++)
 		{
-			float value = FBM(Eigen::Vector3f(j, i, 0), 0.1, 2, 60, 0.6f);
+			float value = FBM(Eigen::Vector3f(j, i, 0), 0.25f, 2.0f, 7, 0.7f);
 			result(j, i) = Eigen::Vector3f(value, value, value);
-		}
+		}*/
 
 	return result;
 }
@@ -89,9 +90,9 @@ RGBImage FBMGenerator::BuildNoiseImage(int width, int height)
 
 
 
-float FBMGenerator::FBM(Eigen::Vector3f point, float H, int lacunarity, int octaves, float offset)
+float FBMGenerator::FBM(Eigen::Vector3f point, float H, float lacunarity, int octaves, float offset)
 {
-    #define MAX_OCTAVES 12  //TODO:: Handle this much better
+    #define MAX_OCTAVES 10  //TODO:: Handle this much better
 	float value, frequency, remainder, signal, weight;
 	int i;
 	static bool first = true;

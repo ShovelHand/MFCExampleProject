@@ -13,8 +13,7 @@
 #include <glm/glm/gtc/type_ptr.hpp>
 #include "FBMGenerator.h"
 
-#define FBM_SIZE 128
-
+#define FBM_SIZE 512
 class COpenGLControl : public CWnd
 {
 public:

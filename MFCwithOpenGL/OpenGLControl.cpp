@@ -303,7 +303,7 @@ void COpenGLControl::oglInitialize(void)
 	glGenVertexArrays(1, &_vao);
 	glBindVertexArray(_vao);
 	
-	MakeVertices(40,40);
+	MakeVertices(200,200);
 
 	///--- Buffer
 	glGenBuffers(1, &_vbo_vpoint);
@@ -335,7 +335,7 @@ void COpenGLControl::oglInitialize(void)
 	///--- Load texture heightmap
 	glGenTextures(1, &tex_heightmap);
 
-	glUniform1i(glGetUniformLocation(pid, "tex_height"), 6 /*GL_TEXTURE6*/);
+	glUniform1i(glGetUniformLocation(pid, "tex_height"), 0 /*GL_TEXTURE6*/);
 	glBindTexture(GL_TEXTURE_2D, tex_heightmap);
 	//	glfwLoadTexture2D("_mesh/blacknwhitefbm.tga", 0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -352,8 +352,8 @@ void COpenGLControl::oglInitialize(void)
 	glUseProgram(0);
 
 	//setup camera
-	dirVec = vec3(0.0f, -10.0f, -2.0f);
-	eye = vec3(0.0f, 10.0f, 10.0f);
+	dirVec = vec3(20.0f, 0.0f, 0.0f);
+	eye = vec3(20.0f, 70.0f, 10.0f);
 	Projection = perspective(radians(45.0f), 1.0f, 1.0f, 200.0f);
 //	View = translate(mat4(1.0f), eye);
 	View = lookAt(eye, dirVec, vec3(0.0f, 1.0f, 0.0f));
@@ -370,13 +370,15 @@ void COpenGLControl::oglDrawScene(void)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glUseProgram(pid);
 	
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, tex_heightmap);
+
 	glUniformMatrix4fv(glGetUniformLocation(pid, "model"), 1, GL_FALSE, &Model[0][0]);
 	glUniformMatrix4fv(glGetUniformLocation(pid, "view"), 1, GL_FALSE, &View[0][0]);
 	glUniformMatrix4fv(glGetUniformLocation(pid, "projection"), 1, GL_FALSE, &Projection[0][0]);
 	
 	glBindVertexArray(_vao);
 
-	glPointSize(5.0f);
 	glDrawArrays(GL_TRIANGLES, 0, triangle_vec.size()); 
 
 	glUseProgram(0);
