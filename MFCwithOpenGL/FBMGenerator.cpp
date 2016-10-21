@@ -233,8 +233,6 @@ float FBMGenerator::FBMRidges(Eigen::Vector3f point, float H, float lacunarity, 
 
 float FBMGenerator::Distort(Eigen::Vector3f point, float H, float Lacunarity, int octaves, float distortion)
 {
-
-	
 	Eigen::Vector3f distort;
 	Eigen::Vector3f tmp = point;
 	if (m_bHills)

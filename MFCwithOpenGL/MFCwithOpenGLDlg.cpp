@@ -77,9 +77,10 @@ CMFCwithOpenGLDlg::CMFCwithOpenGLDlg(CWnd* pParent /*=NULL*/)
 void CMFCwithOpenGLDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+	/*
 	DDX_Control(pDX, IDC_CHECK1, m_enableDistortCheck);
 	DDX_Check(pDX, IDC_CHECK1, m_enableDistortCheckVal);
-
+	*/
 
 	DDX_Control(pDX, IDC_EDIT3, m_iRandControl);
 	DDX_Text(pDX, IDC_EDIT3, m_iRandVal);
@@ -98,7 +99,7 @@ void CMFCwithOpenGLDlg::DoDataExchange(CDataExchange* pDX)
 	DDV_MinMaxInt(pDX, m_iLacunarity, 0, 4);
 	DDX_Slider(pDX, IDC_SLIDEROCTAVES, m_iOctaves);
 	DDV_MinMaxInt(pDX, m_iOctaves, 1, 10);
-	DDX_Control(pDX, IDC_SLIDER_DISTORT, m_DistortSlider);
+//	DDX_Control(pDX, IDC_SLIDER_DISTORT, m_DistortSlider);
 	DDX_Control(pDX, IDC_SLIDERH, m_SliderH);
 	DDX_Slider(pDX, IDC_SLIDERH, m_iH);
 	DDV_MinMaxInt(pDX, m_iH, 1, 10);
@@ -108,7 +109,7 @@ void CMFCwithOpenGLDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Slider(pDX, IDC_SLIDERPERIOD, m_iPeriodVal);
 	DDV_MinMaxInt(pDX, m_iPeriodVal, 1, 256);
 	DDX_Control(pDX, IDC_SLIDER6, m_SliderOffset);
-	DDX_Slider(pDX, IDC_SLIDER_DISTORT, m_iDistortVal);
+//	DDX_Slider(pDX, IDC_SLIDER_DISTORT, m_iDistortVal);
 	DDV_MinMaxInt(pDX, m_iDistortVal, 0, 10);
 	DDX_Slider(pDX, IDC_SLIDER6, m_iOffset);
 	DDV_MinMaxInt(pDX, m_iOffset, 0, 10);
@@ -131,7 +132,7 @@ BEGIN_MESSAGE_MAP(CMFCwithOpenGLDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
-	ON_BN_CLICKED(IDC_CHECK1, &CMFCwithOpenGLDlg::OnBnClickedCheck1)
+//	ON_BN_CLICKED(IDC_CHECK1, &CMFCwithOpenGLDlg::OnBnClickedCheck1)
 	ON_BN_CLICKED(IDC_BUTTON1, &CMFCwithOpenGLDlg::OnBnClickedButton1)
 	ON_EN_UPDATE(IDC_EDIT2, &CMFCwithOpenGLDlg::OnEnUpdateEdit2)
 	ON_EN_CHANGE(IDC_EDIT3, &CMFCwithOpenGLDlg::OnEnChangeEdit3)
@@ -200,9 +201,9 @@ BOOL CMFCwithOpenGLDlg::OnInitDialog()
 
 	//control initializations here
 	//sliders
-	m_DistortSlider.SetRange(1, 10);
-	m_DistortSlider.SetPos(1);
-	m_DistortSlider.EnableWindow(FALSE);
+//	m_DistortSlider.SetRange(1, 10);
+//	m_DistortSlider.SetPos(1);
+//	m_DistortSlider.EnableWindow(FALSE);
 	m_SliderPeriod.SetRange(1, 256);
 	m_SliderPeriod.SetPos(64);
 	m_SliderH.SetRange(1, 10);
@@ -279,7 +280,7 @@ HCURSOR CMFCwithOpenGLDlg::OnQueryDragIcon()
 }
 
 
-
+/*
 void CMFCwithOpenGLDlg::OnBnClickedCheck1()
 {
 	// TODO: Add your control notification handler code here
@@ -294,7 +295,7 @@ void CMFCwithOpenGLDlg::OnBnClickedCheck1()
 	}
 	UpdateTerrainBuilder();
 }
-
+*/
 
 void CMFCwithOpenGLDlg::OnBnClickedButton1()
 {
@@ -343,11 +344,11 @@ void CMFCwithOpenGLDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBa
 
 	CDialogEx::OnHScroll(nSBCode, nPos, pScrollBar);
 	CDialogEx::OnVScroll(nSBCode, nPos, pScrollBar);
-	if (pScrollBar == (CScrollBar *)&m_DistortSlider)
-	{
-		m_fDistortVal = float(m_DistortSlider.GetPos() / 10.0f);
-	}
-	else if (pScrollBar == (CScrollBar *)&m_SliderH)
+	//if (pScrollBar == (CScrollBar *)&m_DistortSlider)
+	//{
+	//	m_fDistortVal = float(m_DistortSlider.GetPos() / 10.0f);
+	//}
+	if (pScrollBar == (CScrollBar *)&m_SliderH)
 	{
 		m_fH = float(m_SliderH.GetPos() / 10.0f);
 	}
@@ -423,6 +424,7 @@ void CMFCwithOpenGLDlg::OnEnChangeEdit5()
 void CMFCwithOpenGLDlg::OnBnClickedRadio1()
 {
 	m_oglWindow.SetTerrainType(COpenGLControl::hills);
+	
 }
 
 //ridges
