@@ -12,6 +12,7 @@
 #include <glm/glm/gtc/matrix_transform.hpp> // glm::translate, glm::rotate, glm::scale, glm::perspective
 #include <glm/glm/gtc/type_ptr.hpp>
 #include "FBMGenerator.h"
+#include <iostream>
 
 #define FBM_SIZE 512
 class COpenGLControl : public CWnd
@@ -63,6 +64,9 @@ private:
 
 	GLuint vbo_vtexcoord; ///< memory buffer
 	GLuint tex_heightmap;
+	
+	GLuint vertexShader;
+	GLuint fragmentShader;
 
 	std::vector<glm::vec3> vertices;
 	std::vector<glm::vec3> triangle_vec;
@@ -120,6 +124,89 @@ public:
 
 	afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
 	
+	
+	//Shaders added to header for portability
+	/****************************************************/
+	private:
+
+		GLuint loadShaders();
+
+		const char* vshader = R"GLSL( #version 330 core
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 normal;
+
+in vec3 vpoint;
+in vec2 TexCoord;
+out vec2 TexCoord0;
+in vec3 vnormal;
+
+
+out vec3 fpoint; ///< for debug
+out vec3 fnormal_cam;
+out float vheight; 
+out vec2 uv;
+
+
+
+uniform mat4 projection;
+uniform mat4 view;
+uniform mat4 model;
+
+uniform sampler2D tex_height;
+float tex_at(vec2 uv){ return texture(tex_height,uv).r; }
+
+void main()
+{
+	fpoint = vpoint + .5; ///< For coloring Debug [0,1]^3 
+	vheight =  tex_at(TexCoord);
+	gl_Position = projection * view * vec4(vpoint.x, vheight, vpoint.z, 1.0f);
+	TexCoord0 = TexCoord;
+    uv = vec2(fpoint.x, fpoint.z);
+})GLSL";
+
+	const char* fshader = R"GLSL(#version 330 core
+
+
+in vec2 TexCoord0;
+out vec3 color;
+in vec3 fpoint;
+in vec3 fnormal_cam;
+uniform float time;
+in float vheight;
+
+in vec2 uv;
+uniform int showHeightMap;
+uniform float ambientLight;
+uniform float intensity;
+
+uniform sampler2D tex_height;
+uniform vec3 lightPos;
+void main()
+{
+
+	float dx_p = textureOffset(tex_height, TexCoord0.st, ivec2(+1,0))[0];
+	float dx_m = textureOffset(tex_height, TexCoord0.st, ivec2(-1,0))[0];
+	float dy_p = textureOffset(tex_height, TexCoord0.st, ivec2(0,+1))[0];
+	float dy_m = textureOffset(tex_height, TexCoord0.st, ivec2(0,-1))[0];
+	
+	vec3 dx = normalize(vec3(1.0,dx_p - dx_m,0.0));
+	vec3 dy = normalize(vec3(1.0,dy_p - dy_m,0.0));
+	vec3 surfaceNorm = vec3(cross(dx,dy));
+	
+	vec3 L = lightPos; // vec3(11,40,-11); //light position
+	vec3 H = normalize(L + fnormal_cam);
+
+	float light = max(dot(surfaceNorm, normalize(L))*intensity, ambientLight);
+	
+	
+	if(showHeightMap > 0)
+		color = texture(tex_height, TexCoord0.st).rgb;
+	else
+	{
+		color = vec3(0.50,0.50,0.5)* light;
+	}
+	
+})GLSL";
 
 };
 
