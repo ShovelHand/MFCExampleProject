@@ -31,6 +31,16 @@ public:
 	float	 m_fRotY;
 	bool	 m_bIsMaximized;
 
+	struct values{
+		int period;
+		float H;
+		float lac;
+		int octaves;
+		int offset;
+		float distortVal;
+		bool distort;
+	}values;
+
 private:
 	/*******************/
 	/* Private Members */
@@ -59,6 +69,7 @@ private:
 	std::vector<glm::vec2> vtexcoord;  //texture coords for height map. Covers whole mesh
 	void MakeVertices(int width, int height);
 //	FBMGenerator noiseGenerator;
+	FBMGenerator* generator;
 
 	//camera stuff
 	glm::mat4 Projection;
@@ -69,6 +80,10 @@ private:
 	glm::vec3 eye;
 	void RotateX(glm::vec3 *dir, float rot);
 	void RotateY(glm::vec3 *dir, float rot);
+	
+	//user defined controls
+	int m_iTerrainSize;
+	int m_iRandSeed;
 
 public:
 	COpenGLControl(void);
@@ -86,10 +101,25 @@ public:
 	afx_msg void OnTimer(UINT nIDEvent);
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 
+	void Generate();
+	void SetSize(int size) { m_iTerrainSize = size; }
+	void SetRandomSeed(int seed) { generator->m_iRandSeed = seed; }
+	void UpdateGenerator(void);
+	bool m_bShowHeightMap;
 
+	void ResetCamera();
+
+	float m_fIntensity;
+	float m_fAmbient;
+	glm::vec3 lightPos;
+
+	enum TerrainType  { hills = 1, ridges, plain };
+	void SetTerrainType(TerrainType type);
 
 	DECLARE_MESSAGE_MAP()
 
 	afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
+	
+
 };
 

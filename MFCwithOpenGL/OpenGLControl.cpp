@@ -13,6 +13,10 @@ COpenGLControl::COpenGLControl(void)
 	m_fRotX = 0.0f;		// Rotation on model in camera view
 	m_fRotY = 0.0f;		// Rotation on model in camera view
 	m_bIsMaximized = false;
+	m_bShowHeightMap = false;
+
+	generator = new FBMGenerator(m_iRandSeed);
+	lightPos = vec3(110, 40, 11);
 }
 
 COpenGLControl::~COpenGLControl(void)
@@ -23,6 +27,7 @@ COpenGLControl::~COpenGLControl(void)
 //	glDeleteBuffers(1, &_vbo_vtexcoord);
 	glDeleteProgram(pid);
 	glDeleteVertexArrays(1, &_vao);
+	delete(generator);
 }
 
 BEGIN_MESSAGE_MAP(COpenGLControl, CWnd)
@@ -33,7 +38,64 @@ BEGIN_MESSAGE_MAP(COpenGLControl, CWnd)
 	ON_WM_MOUSEMOVE()
 	ON_WM_MOUSEHWHEEL()
 	ON_WM_MOUSEWHEEL()
+
 END_MESSAGE_MAP()
+
+
+void COpenGLControl::Generate()
+{
+	//--- Vertex one vertex Array
+	glGenVertexArrays(1, &_vao);
+	glBindVertexArray(_vao);
+	
+	MakeVertices(m_iTerrainSize, m_iTerrainSize);
+
+	///--- Buffer
+	glGenBuffers(1, &_vbo_vpoint);
+	glBindBuffer(GL_ARRAY_BUFFER, _vbo_vpoint);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vec3)*triangle_vec.size(), &triangle_vec[0], GL_STATIC_DRAW);
+
+	///--- Attribute
+	GLuint vpoint_id = glGetAttribLocation(pid, "vpoint");
+	glVertexAttribPointer(vpoint_id, 3, GL_FLOAT, GL_TRUE, 0, NULL);
+	glEnableVertexAttribArray(vpoint_id);
+
+	//Height map inits
+	
+	RGBImage Noise = generator->BuildNoiseImage(FBM_SIZE, FBM_SIZE); 
+	
+	
+	//vertex buffer for heightmap texture
+	{
+		///--- Buffer
+		glGenBuffers(1, &vbo_vtexcoord);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo_vtexcoord);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vec2)*vtexcoord.size(), &vtexcoord[0], GL_STATIC_DRAW);
+
+		///--- Attribute
+		GLuint vtexcoord_id = glGetAttribLocation(pid, "TexCoord");
+		glEnableVertexAttribArray(vtexcoord_id);
+		glVertexAttribPointer(vtexcoord_id, 2, GL_FLOAT, GL_TRUE, 0, NULL);
+	}
+	///--- Load texture heightmap
+	glGenTextures(1, &tex_heightmap);
+
+	glUniform1i(glGetUniformLocation(pid, "tex_height"), 0 /*GL_TEXTURE6*/);
+	glBindTexture(GL_TEXTURE_2D, tex_heightmap);
+	//	glfwLoadTexture2D("_mesh/blacknwhitefbm.tga", 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, Noise.rows(),
+		Noise.cols(), 0, GL_RGB, GL_FLOAT,
+		Noise.data());
+
+
+	///--- to avoid the current object being polluted
+	glBindVertexArray(0);
+	glUseProgram(0);
+}
 
 void COpenGLControl::OnPaint()
 {
@@ -200,8 +262,8 @@ void COpenGLControl::OnMouseMove(UINT nFlags, CPoint point)
 		}
 
 		//rotate the camera and the point it's looking at.
-		RotateX(&dirVec, m_fRotX/100.0f);
-		RotateY(&dirVec, m_fRotY/100.0f);
+//		RotateX(&dirVec, m_fRotX/100.0f);
+//		RotateY(&dirVec, m_fRotY/100.0f);
 		RotateX(&eye, m_fRotX / 100.0f);
 		RotateY(&eye, m_fRotY / 100.0f);
 	}
@@ -297,64 +359,15 @@ void COpenGLControl::oglInitialize(void)
 		"c:\\Users\\Alex\\documents\\Shaders\\fragShader.glsl");
 	if (!pid) exit(EXIT_FAILURE);
 
-	//make the grid
+	m_iTerrainSize = 100;
+	m_iRandSeed = 19;
 
-	//--- Vertex one vertex Array
-	glGenVertexArrays(1, &_vao);
-	glBindVertexArray(_vao);
 	
-	MakeVertices(200,200);
-
-	///--- Buffer
-	glGenBuffers(1, &_vbo_vpoint);
-	glBindBuffer(GL_ARRAY_BUFFER, _vbo_vpoint);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vec3)*triangle_vec.size(), &triangle_vec[0], GL_STATIC_DRAW);
-
-	///--- Attribute
-	GLuint vpoint_id = glGetAttribLocation(pid, "vpoint");
-	glVertexAttribPointer(vpoint_id, 3, GL_FLOAT, GL_TRUE, 0, NULL);
-	glEnableVertexAttribArray(vpoint_id);
-
-	//Height map inits
-	FBMGenerator* generator = new FBMGenerator();
-	RGBImage Noise = generator->BuildNoiseImage(FBM_SIZE, FBM_SIZE); 
-	
-	
-	//vertex buffer for heightmap texture
-	{
-		///--- Buffer
-		glGenBuffers(1, &vbo_vtexcoord);
-		glBindBuffer(GL_ARRAY_BUFFER, vbo_vtexcoord);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vec2)*vtexcoord.size(), &vtexcoord[0], GL_STATIC_DRAW);
-
-		///--- Attribute
-		GLuint vtexcoord_id = glGetAttribLocation(pid, "TexCoord");
-		glEnableVertexAttribArray(vtexcoord_id);
-		glVertexAttribPointer(vtexcoord_id, 2, GL_FLOAT, GL_TRUE, 0, NULL);
-	}
-	///--- Load texture heightmap
-	glGenTextures(1, &tex_heightmap);
-
-	glUniform1i(glGetUniformLocation(pid, "tex_height"), 0 /*GL_TEXTURE6*/);
-	glBindTexture(GL_TEXTURE_2D, tex_heightmap);
-	//	glfwLoadTexture2D("_mesh/blacknwhitefbm.tga", 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, Noise.rows(),
-		Noise.cols(), 0, GL_RGB, GL_FLOAT,
-		Noise.data());
-
-
-	///--- to avoid the current object being polluted
-	glBindVertexArray(0);
-	glUseProgram(0);
 
 	//setup camera
-	dirVec = vec3(20.0f, 0.0f, 0.0f);
-	eye = vec3(20.0f, 70.0f, 10.0f);
-	Projection = perspective(radians(45.0f), 1.0f, 1.0f, 200.0f);
+	dirVec = vec3(0.0f, 0.0f, 0.0f);
+	eye = vec3(0.0f, 70.0f, 200.0f);
+	Projection = perspective(radians(45.0f), 1.0f, 1.0f, 500.0f);
 //	View = translate(mat4(1.0f), eye);
 	View = lookAt(eye, dirVec, vec3(0.0f, 1.0f, 0.0f));
 	Model = scale(mat4(1.0f), vec3(1.0f));
@@ -370,6 +383,18 @@ void COpenGLControl::oglDrawScene(void)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glUseProgram(pid);
 	
+	if(m_bShowHeightMap)
+		glUniform1i(glGetUniformLocation(pid, "showHeightMap"), 1);
+	else
+		glUniform1i(glGetUniformLocation(pid, "showHeightMap"), 0);
+	
+	glUniform1f(glGetUniformLocation(pid, "intensity"), m_fIntensity);
+	glUniform1f(glGetUniformLocation(pid, "ambientLight"), m_fAmbient);
+
+	float light[3] = { lightPos.x, lightPos.y, lightPos.z };
+	glUniform3f(glGetUniformLocation(pid, "lightPos"), lightPos.x, lightPos.y, lightPos.z);
+
+
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, tex_heightmap);
 
@@ -387,6 +412,9 @@ void COpenGLControl::oglDrawScene(void)
 
 void COpenGLControl::MakeVertices(int width, int height)
 {
+	vertices.clear();
+	triangle_vec.clear();
+	vtexcoord.clear();
 
 	for (int i = -0; i < height; i++)
 	{
@@ -421,6 +449,42 @@ void COpenGLControl::MakeVertices(int width, int height)
 		
 }
 
+void COpenGLControl::UpdateGenerator()
+{
+	generator->m_iPeriod = values.period;
+	generator->m_fH = values.H;
+	generator->m_fLac = values.lac;
+	generator->m_iOctaves = values.octaves;
+	generator->m_fOffset = values.offset;
 
+	generator->m_fDistort = values.distortVal;
+	generator->m_bDistort = values.distort;
+}
 
+void COpenGLControl::ResetCamera()
+{
+	dirVec = vec3(20.0f, 0.0f, 0.0f);
+	eye = vec3(20.0f, 70.0f, 10.0f);
+	View = lookAt(eye, dirVec, vec3(0.0f, 1.0f, 0.0f));
+}
 
+void COpenGLControl::SetTerrainType(TerrainType type)
+{
+	switch (type)
+	{
+	case hills:
+		generator->m_bHills = true;
+		generator->m_bRidges = false;
+		break;
+	case ridges:
+		generator->m_bRidges = true;
+		generator->m_bHills = false;
+		break;
+	case plain: 
+		generator->m_bRidges = false;
+		generator->m_bHills = false;
+		break;
+	default:
+		break;
+	}
+}

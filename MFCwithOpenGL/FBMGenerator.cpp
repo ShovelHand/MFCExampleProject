@@ -4,8 +4,18 @@
 
 //using namespace glm;
 
-FBMGenerator::FBMGenerator()
+FBMGenerator::FBMGenerator(int randSeed) :
+	m_fLac(2.0f)
+	, m_fH(0.2f)
+	, m_fOffset(0.7f)
+	, m_iOctaves(7)
+	, m_iPeriod(128)
+	, m_bDistort(false)
+	, m_fDistort(0.1f)
+	, m_bHills(false)
+	, m_bRidges(false)
 {
+	m_iRandSeed = randSeed;
 }
 
 
@@ -23,9 +33,9 @@ RGBImage FBMGenerator::BuildNoiseImage(int width, int height)
 	RGBImage base(width, height);
 	RGBImage result(width, height);
 	//set vertex heights using Perlin noise
-	int period = 120;
-	float frequency = 1.0f / period;
-	std::srand(19);
+//	int period = 128;
+	float frequency = 1.0f / m_iPeriod;
+	std::srand(m_iRandSeed);
 	Eigen::Vector3f randGradientVec;
 
 	for (int i = 0; i < width; ++i)
@@ -42,12 +52,12 @@ RGBImage FBMGenerator::BuildNoiseImage(int width, int height)
 	{
 		for (int j = 0; j < height; ++j)
 		{
-			int left = (i / period) * period;
-			int right = (left + period) % width;
+			int left = (i / m_iPeriod) *  m_iPeriod;
+			int right = (left + m_iPeriod) % width;
 			float dx = (i - left) * frequency;
 
-			int top = (j / period) * period;
-			int bottom = (top + period) % height;
+			int top = (j / m_iPeriod) *  m_iPeriod;
+			int bottom = (top + m_iPeriod) % height;
 			float dy = (j - top) * frequency;
 
 			Eigen::Vector2f a(dx, -dy);
@@ -71,18 +81,32 @@ RGBImage FBMGenerator::BuildNoiseImage(int width, int height)
 			float uv = Mix(u, v, fx);
 			float noise = Mix(st, uv, fy);
 
-				result(i,j) = Eigen::Vector3f(noise, noise, noise);
+			//	result(i,j) = Eigen::Vector3f(noise, noise, noise);
 			noiseArray[i][j] = noise;
 		}
 	}
 
 	//Build FBM image based on perlin noise.
-	/*for (int i = 0; i < base.rows(); i++)
+	for (int i = 0; i < base.rows(); i++)
 		for (int j = 0; j < base.cols(); j++)
 		{
-			float value = FBM(Eigen::Vector3f(j, i, 0), 0.25f, 2.0f, 7, 0.7f);
-			result(j, i) = Eigen::Vector3f(value, value, value);
-		}*/
+			float value;
+			if(!m_bDistort)
+			{
+				if(m_bHills)
+					value = FBMHills(Eigen::Vector3f(j, i, 0), m_fH, m_fLac, m_iOctaves, m_fOffset);
+				else if(m_bRidges)
+					value = FBMRidges(Eigen::Vector3f(j, i, 0), m_fH, m_fLac, m_iOctaves, m_fOffset);
+				else
+					 value = FBM(Eigen::Vector3f(j, i, 0), m_fH, m_fLac, m_iOctaves, m_fOffset);
+				result(j, i) = Eigen::Vector3f(value, value, value);
+			}
+			else
+			{
+				value = Distort(Eigen::Vector3f(j, i, 0), m_fH, m_fLac, m_iOctaves, m_fDistort);
+				result(j, i) = Eigen::Vector3f(value, value, value);
+			}
+		}
 
 	return result;
 }
@@ -92,7 +116,85 @@ RGBImage FBMGenerator::BuildNoiseImage(int width, int height)
 
 float FBMGenerator::FBM(Eigen::Vector3f point, float H, float lacunarity, int octaves, float offset)
 {
-    #define MAX_OCTAVES 10  //TODO:: Handle this much better
+    
+	float value, frequency, remainder, signal, weight;
+	int i;
+	static bool first = true;
+	static float exp_array[MAX_OCTAVES];
+
+	if (first)
+	{
+		frequency = 1.0f;
+
+		for (i = 0; i< MAX_OCTAVES; i++)
+		{ /* compute weight for each frequency */
+			exp_array[i] = pow(frequency, -H);
+			frequency *= lacunarity;
+		}
+
+		first = false;
+	}
+	
+	value = 0.0f;
+	
+	for (int i = 0; i < MAX_OCTAVES; ++i)
+	{
+		value += noiseArray[int(point.x() + offset) % FBM_SIZE][int(point.y() + offset) % FBM_SIZE] * exp_array[i];
+		point.x() *= lacunarity; point.y() *= lacunarity;// point.z() *= lacunarity;
+	}
+
+	remainder = octaves - (int)octaves;
+	if (remainder) /* add in "octaves" remainder */ /* "i" and spatial freq. are preset in loop above */
+		value += remainder * noiseArray[int(point.x()) / FBM_SIZE][int(point.y()) / FBM_SIZE] * exp_array[i];
+
+	return value;
+}
+
+float FBMGenerator::FBMHills(Eigen::Vector3f point, float H, float lacunarity, int octaves, float offset)
+{
+
+	float value, frequency, remainder, signal, weight;
+	int i = 0;
+	static bool first = true;
+	static float exp_array[MAX_OCTAVES];
+
+	if (first)
+	{
+		frequency = 1.0f;
+
+		for (i = 0; i< MAX_OCTAVES; i++)
+		{ /* compute weight for each frequency */
+			exp_array[i] = pow(frequency, -H);
+			frequency *= lacunarity;
+		}
+
+		first = false;
+	}
+	value = noiseArray[int(point.x() + offset) % FBM_SIZE][int(point.y() + offset) % FBM_SIZE] * exp_array[i];
+	weight = value;
+	point.x() *= lacunarity; point.y() *= lacunarity;// point.z() *= lacunarity;
+
+	/* inner loop of spectral construction */
+	for (i = 0; i < octaves; i++)
+	{
+		if (weight > 1.0) weight = 1.0;
+
+		signal = noiseArray[int(point.x() + offset) % FBM_SIZE][int(point.y() + offset) % FBM_SIZE] * exp_array[i];
+		value += weight * signal;
+		weight *= signal;
+		point.x() *= lacunarity; point.y() *= lacunarity;// point.z() *= lacunarity;
+	} /* for */
+
+	remainder = octaves - (int)octaves;
+	if (remainder) /* add in "octaves" remainder */ /* "i" and spatial freq. are preset in loop above */
+		value += remainder * noiseArray[int(point.x()) / FBM_SIZE][int(point.y()) / FBM_SIZE] * exp_array[i];
+
+	return value;
+}
+
+float FBMGenerator::FBMRidges(Eigen::Vector3f point, float H, float lacunarity, int octaves, float offset)
+{
+
 	float value, frequency, remainder, signal, weight;
 	int i;
 	static bool first = true;
@@ -127,4 +229,56 @@ float FBMGenerator::FBM(Eigen::Vector3f point, float H, float lacunarity, int oc
 		value += remainder * noiseArray[int(point.x()) / FBM_SIZE][int(point.y()) / FBM_SIZE] * exp_array[i];
 
 	return value;
+}
+
+float FBMGenerator::Distort(Eigen::Vector3f point, float H, float Lacunarity, int octaves, float distortion)
+{
+
+	
+	Eigen::Vector3f distort;
+	Eigen::Vector3f tmp = point;
+	if (m_bHills)
+	{
+		distort.x() = FBMHills(tmp, m_fH, m_fLac, m_iOctaves, m_fOffset);
+		tmp.x() += 10.5f;
+		distort.y() = FBMHills(tmp, m_fH, m_fLac, m_iOctaves, m_fOffset);
+		tmp.x() += 10.5f;
+		distort.z() = FBMHills(tmp, m_fH, m_fLac, m_iOctaves, m_fOffset);
+	}
+	else if (m_bRidges) 
+	{
+		distort.x() = FBMRidges(tmp, m_fH, m_fLac, m_iOctaves, m_fOffset);
+		tmp.x() += 10.5f;
+		distort.y() = FBMRidges(tmp, m_fH, m_fLac, m_iOctaves, m_fOffset);
+		tmp.x() += 10.5f;
+		distort.z() = FBMRidges(tmp, m_fH, m_fLac, m_iOctaves, m_fOffset);
+	}
+
+	else
+	{
+		distort.x() = FBM(tmp, m_fH, m_fLac, m_iOctaves, m_fOffset);
+		tmp.x() += 10.5f;
+		distort.y() = FBM(tmp, m_fH, m_fLac, m_iOctaves, m_fOffset);
+		tmp.x() += 10.5f;
+		distort.z() = FBM(tmp, m_fH, m_fLac, m_iOctaves, m_fOffset);
+	}
+
+	point.x() =  distort.x() * distortion;
+	point.y() = distortion * distort.y();
+	point.z() = distortion * distort.z();
+
+	if (m_bHills)
+	{
+		return FBMHills(point, m_fH, m_fLac, m_iOctaves, m_fOffset) /100.0f;
+	}
+	else if (m_bRidges)
+	{
+		return FBMRidges(point, m_fH, m_fLac, m_iOctaves, m_fOffset) / 100.0f;
+	}
+
+	else
+	{
+		return FBM(point, m_fH, m_fLac, m_iOctaves, m_fOffset) / 100.0f;
+	}
+		
 }
